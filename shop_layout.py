@@ -259,6 +259,49 @@ panel_obj = box("ElectricalPanel",
     color=C_PANEL, transp=0)
 
 # =============================================================================
+# TOOLS — West wall, south of electrical panel
+# =============================================================================
+# Coordinate reminders: X=East (depth from west wall), Y=North, Z=Up
+# Panel bottom face is at panel_bot_y; tools run south from there.
+
+C_TOOL   = (0.25, 0.25, 0.30)   # dark steel / cast iron
+C_TOPTBL = (0.48, 0.48, 0.53)   # cast-iron table surface
+
+# ── Band Saw ──────────────────────────────────────────────────────────────────
+# Floor-mount on wheels, 6' tall overall
+# Base footprint: 24" deep (into room, X) × 18" wide (along wall, Y)
+# Table: 21-3/8" × 15-5/8" tilting, at ~40" AFF
+# Positioned against west wall, 6" south of panel bottom
+
+BS_GAP  = inch(6)
+BS_DX   = inch(24)         # depth from west wall into room
+BS_DY   = inch(18)         # width along west wall
+BS_DZ   = inch(72)         # 6' overall height (incl. wheels)
+BS_X    = X_W              # flush against west wall (interior face)
+BS_Y    = panel_bot_y - BS_GAP - BS_DY   # south face of saw footprint
+
+# Main body — column + housing
+bs_body = box("BandSaw_Body",
+    BS_X, BS_Y, 0,
+    BS_DX, BS_DY, BS_DZ,
+    color=C_TOOL, transp=0)
+
+# Tilting table — centred on body at 40" AFF, 1.5" thick
+BS_TW = inch(21 + 3/8)     # 21-3/8" (E-W, sticks out from body)
+BS_TD = inch(15 + 5/8)     # 15-5/8" (N-S)
+BS_TZ = inch(40)            # table surface height AFF
+BS_TT = inch(1.5)           # table slab thickness
+
+bs_table = box("BandSaw_Table",
+    BS_X + (BS_DX - BS_TW) / 2,
+    BS_Y + (BS_DY - BS_TD) / 2,
+    BS_TZ,
+    BS_TW, BS_TD, BS_TT,
+    color=C_TOPTBL, transp=0)
+
+tool_objs = [bs_body, bs_table]
+
+# =============================================================================
 # GROUPS
 # =============================================================================
 def grp(name, objs):
@@ -273,6 +316,7 @@ grp("Grp_Walls",    [south_wall, west_wall,
 grp("Grp_Door",     [door_obj])
 grp("Grp_Joists",   lower_joist_objs + main_joist_objs)
 grp("Grp_Electrical", [panel_obj])
+grp("Grp_Tools",     tool_objs)
 
 # =============================================================================
 # FINALISE
@@ -293,5 +337,8 @@ print(f"  Lower joists  : {len(lower_joist_objs)} @ 16\" OC  (Y = 6\" to 7')")
 print(f"  Main joists   : {len(main_joist_objs)} shown  (incl 2 south of room)")
 print(f"  Door          : 36\" x 80\",  east-north wall, 6\" from east end")
 print("=" * 60)
-print("Groups: Grp_Floor / Grp_Walls / Grp_Door / Grp_Joists / Grp_Electrical")
+print(f"  Band saw base : 24\" deep x 18\" wide, against west wall")
+print(f"  Band saw Y    : {BS_Y/25.4/12:.2f}' from south (south face of base)")
+print(f"  Band saw gap  : 6\" south of electrical panel")
+print("Groups: Grp_Floor / Grp_Walls / Grp_Door / Grp_Joists / Grp_Electrical / Grp_Tools")
 print("Toggle visibility in Model panel to isolate layers.")
