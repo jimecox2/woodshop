@@ -267,50 +267,67 @@ panel_obj = box("ElectricalPanel",
 C_TOOL   = (0.25, 0.25, 0.30)   # dark steel / cast iron
 C_TOPTBL = (0.48, 0.48, 0.53)   # cast-iron table surface
 
-# ── Band Saw ──────────────────────────────────────────────────────────────────
-# Floor-mount on wheels, 6' tall overall
-# Base footprint: 24" deep (into room, X) × 18" wide (along wall, Y)
-# Table: 21-3/8" × 15-5/8" tilting, at ~40" AFF
-# Positioned against west wall, 6" south of panel bottom
-
-BS_GAP  = inch(6)
-BS_DX   = inch(24)         # depth from west wall into room
-BS_DY   = inch(18)         # width along west wall
-BS_DZ   = inch(72)         # 6' overall height (incl. wheels)
-BS_X    = X_W              # flush against west wall (interior face)
-BS_Y    = panel_bot_y - BS_GAP - BS_DY   # south face of saw footprint
-
-# Main body — column + housing
-bs_body = box("BandSaw_Body",
-    BS_X, BS_Y, 0,
-    BS_DX, BS_DY, BS_DZ,
-    color=C_TOOL, transp=0)
-
-# Tilting table — centred on body at 40" AFF, 1.5" thick
-BS_TW = inch(21 + 3/8)     # 21-3/8" (E-W, sticks out from body)
-BS_TD = inch(15 + 5/8)     # 15-5/8" (N-S)
-BS_TZ = inch(40)            # table surface height AFF
-BS_TT = inch(1.5)           # table slab thickness
-
-bs_table = box("BandSaw_Table",
-    BS_X + (BS_DX - BS_TW) / 2,
-    BS_Y + (BS_DY - BS_TD) / 2,
-    BS_TZ,
-    BS_TW, BS_TD, BS_TT,
-    color=C_TOPTBL, transp=0)
-
-west_wall_objs = [bs_body, bs_table]
-
 # =============================================================================
-# DRILL PRESS — west wall, 6" south of band saw
+# WEST WALL — south to north: dust collector, drill press, band saw,
+#             thickness planer, storage cabinets, electrical panel
 # =============================================================================
-# Floor-standing, 18" × 18" base, 66" overall height
-# Column 6"×6" centred on base; head 18" wide × 14" deep at ~52" AFF
+C_BENCH   = (0.55, 0.40, 0.25)   # bench-top / wood-tone
+C_STORAGE = C_FRAME
+C_LUMBER  = C_JOIST
 
-DP_GAP  = inch(6)
-DP_DX   = inch(18)          # base depth into room (E-W)
-DP_DY   = inch(18)          # base width along wall (N-S)
-DP_Y1   = BS_Y - DP_GAP - DP_DY   # south face of base
+# ── Dust Collector — SW corner ────────────────────────────────────────────────
+# Base: 26" along west wall (N-S) × 16" deep (E-W), on casters 2" above floor
+# Two filter bags: 15" dia × 24" tall, stacked with 6" metal spacer between
+# Small motor box on base, north of bags
+
+DC_DX     = inch(16)           # base depth into room
+DC_DY     = inch(26)           # base width along wall
+DC_BASE_Z = inch(2)            # caster height (underside of base)
+DC_BASE_H = inch(4)            # base platform thickness  → top at 6" AFF
+
+dc_base = box("DustColl_Base",
+    X_W, Y_S, DC_BASE_Z,
+    DC_DX, DC_DY, DC_BASE_H,
+    color=(0.40, 0.40, 0.45), transp=0)
+
+# Bags centred in the base footprint (leave 5" on north side for motor)
+BAG_R  = inch(7.5)             # 15" dia
+BAG_H  = inch(24)
+BAG_Z0 = DC_BASE_Z + DC_BASE_H  # bottom of first bag = top of base platform
+BAG_CX = X_W + inch(8)         # centre X  (middle of 16" depth)
+BAG_CY = Y_S + inch(10)        # centre Y  (5.5" south clearance, motor north)
+
+bag1_shape = Part.makeCylinder(BAG_R, BAG_H,
+    Vector(BAG_CX, BAG_CY, BAG_Z0), Vector(0, 0, 1))
+dc_bag1 = part_feat("DustColl_Bag1", bag1_shape,
+    color=(0.70, 0.70, 0.74), transp=15)
+
+# Metal spacer between bags
+SPACER_H = inch(6)
+spacer_shape = Part.makeCylinder(inch(6), SPACER_H,
+    Vector(BAG_CX, BAG_CY, BAG_Z0 + BAG_H), Vector(0, 0, 1))
+dc_spacer = part_feat("DustColl_Spacer", spacer_shape,
+    color=(0.45, 0.45, 0.50), transp=0)
+
+# Second bag
+bag2_shape = Part.makeCylinder(BAG_R, BAG_H,
+    Vector(BAG_CX, BAG_CY, BAG_Z0 + BAG_H + SPACER_H), Vector(0, 0, 1))
+dc_bag2 = part_feat("DustColl_Bag2", bag2_shape,
+    color=(0.70, 0.70, 0.74), transp=15)
+
+# Motor — small box on base, north of bags
+dc_motor = box("DustColl_Motor",
+    X_W + inch(2), Y_S + inch(19), BAG_Z0,
+    inch(10), inch(6), inch(10),
+    color=(0.28, 0.28, 0.32), transp=0)
+
+dust_objs = [dc_base, dc_bag1, dc_spacer, dc_bag2, dc_motor]
+
+# ── Drill Press — 1 foot north of dust collector ──────────────────────────────
+DP_GAP = inch(12)              # 1' gap from collector north face
+DP_DX  = inch(18)
+DP_DY  = inch(18)
+DP_Y1  = Y_S + DC_DY + DP_GAP # south face of base
 
 dp_base = box("DrillPress_Base",
     X_W, DP_Y1, 0,
@@ -327,43 +344,113 @@ dp_head = box("DrillPress_Head",
     DP_DX, DP_DY - inch(4), inch(14),
     color=C_TOOL, transp=0)
 
-west_wall_objs += [dp_base, dp_col, dp_head]
+drillpress_objs = [dp_base, dp_col, dp_head]
+
+# ── Band Saw — 1 foot north of drill press ────────────────────────────────────
+# Floor-mount on wheels, 6' tall
+# Base: 24" deep (E-W) × 18" wide (N-S)
+# Tilting table: 21-3/8" × 15-5/8" at 40" AFF
+
+BS_GAP = inch(12)              # 1' gap from drill press north face
+BS_DX  = inch(24)
+BS_DY  = inch(18)
+BS_DZ  = inch(72)
+BS_X   = X_W
+BS_Y   = DP_Y1 + DP_DY + BS_GAP   # south face
+
+bs_body = box("BandSaw_Body",
+    BS_X, BS_Y, 0,
+    BS_DX, BS_DY, BS_DZ,
+    color=C_TOOL, transp=0)
+
+BS_TW = inch(21 + 3/8)
+BS_TD = inch(15 + 5/8)
+bs_table = box("BandSaw_Table",
+    BS_X + (BS_DX - BS_TW) / 2,
+    BS_Y + (BS_DY - BS_TD) / 2,
+    inch(40),
+    BS_TW, BS_TD, inch(1.5),
+    color=C_TOPTBL, transp=0)
+
+bandssaw_objs = [bs_body, bs_table]
+
+# ── Thickness Planer — 6" north of band saw ───────────────────────────────────
+# Machine: 20"×20"×16" body  on a  24"×24"×36" stand on castors (~38" w/casters)
+# Stored against west wall; rolls into open centre for infeed/outfeed
+
+PL_GAP      = inch(6)
+PL_STAND_DX = inch(24)        # stand depth into room
+PL_STAND_DY = inch(24)        # stand width along wall
+PL_STAND_DZ = inch(38)        # 36" stand + ~2" casters
+PL_MACH_W   = inch(20)        # machine body E-W
+PL_MACH_D   = inch(20)        # machine body N-S
+PL_MACH_H   = inch(16)        # machine body height
+PL_Y1       = BS_Y + BS_DY + PL_GAP   # south face of stand
+
+pl_stand = box("Planer_Stand",
+    X_W, PL_Y1, 0,
+    PL_STAND_DX, PL_STAND_DY, PL_STAND_DZ,
+    color=(0.45, 0.45, 0.48), transp=0)
+
+pl_body = box("Planer_Body",
+    X_W + (PL_STAND_DX - PL_MACH_W) / 2,
+    PL_Y1 + (PL_STAND_DY - PL_MACH_D) / 2,
+    PL_STAND_DZ,
+    PL_MACH_W, PL_MACH_D, PL_MACH_H,
+    color=C_TOOL, transp=0)
+
+planer_objs = [pl_stand, pl_body]
+
+# ── West Wall Storage Cabinets — 6" north of planer, to 6" south of panel ────
+# 24" deep × 7' tall cabinets run the full gap between planer and panel
+
+ST_GAP = inch(6)
+ST_Y1  = PL_Y1 + PL_STAND_DY + ST_GAP     # south face
+ST_Y2  = panel_bot_y - ST_GAP              # north face
+ST_DY  = ST_Y2 - ST_Y1
+ST_DX  = inch(24)
+ST_DZ  = inch(84)                          # 7' tall
+
+st_cabs = box("Storage_WestCabs",
+    X_W, ST_Y1, 0,
+    ST_DX, ST_DY, ST_DZ,
+    color=C_STORAGE, transp=20)
+
+storage_west_objs = [st_cabs]
+
+west_wall_objs = (dust_objs + drillpress_objs + bandssaw_objs
+                  + planer_objs + storage_west_objs)
 
 # =============================================================================
-# CHOP SAW STATION — east lower wall, Y=1' to Y=7'
+# EAST WALL — chop saw station starting at the jut
 # =============================================================================
-# 24"-deep bench runs 6' along east wall. Saw centred at Y=4'.
-# Provides 3' of built-in support each side; roller stand at each end
-# gives full 8'-board clearance without leaving the station.
+# Bench north face sits at the bottom of the jut (Y=12'6"), runs 6' south.
+# Saw centred at Y=9'6"; 3' of built-in support each side.
+# South portion of east wall (Y=0–6'6") left open as loading/staging area.
 
-C_BENCH = (0.55, 0.40, 0.25)   # bench-top wood colour
-
-CS_Y1 = ft(1)                   # south end (1' from south wall)
-CS_Y2 = ft(7)                   # north end
-CS_DY = CS_Y2 - CS_Y1           # 6' long
-CS_DX = inch(24)                # 24" deep from east wall
-CS_X2 = X_SE
+CS_Y2 = Y_JUT_BOT                  # north end at bottom of jut = 12'6"
+CS_Y1 = CS_Y2 - ft(6)              # south end = 6'6"
+CS_DY = ft(6)
+CS_DX = inch(24)                    # 24" deep from east wall
 CS_X1 = X_SE - CS_DX
 
-# Bench carcass (34" tall)
 cs_bench = box("ChopSaw_Bench",
     CS_X1, CS_Y1, 0,
     CS_DX, CS_DY, inch(34),
     color=C_FRAME, transp=15)
 
-# Bench top — 1.5" hardwood/MDF surface
 cs_top = box("ChopSaw_BenchTop",
     CS_X1, CS_Y1, inch(34),
     CS_DX, CS_DY, inch(1.5),
     color=C_BENCH, transp=0)
 
-# Miter saw body — centred on bench at Y=4', sitting on bench top
-# Approx. 20" wide × 15" deep × 14" tall (head at rest / lowered)
+# Saw centred N-S on bench, sitting on bench top
 CS_SAW_W = inch(20)
 CS_SAW_D = inch(15)
+CS_SAW_Y = CS_Y1 + CS_DY / 2       # mid-bench Y
 cs_saw = box("ChopSaw_Saw",
     CS_X1 + (CS_DX - CS_SAW_W) / 2,
-    ft(4) - CS_SAW_D / 2,
+    CS_SAW_Y - CS_SAW_D / 2,
     inch(35.5),
     CS_SAW_W, CS_SAW_D, inch(14),
     color=C_TOOL, transp=0)
@@ -371,65 +458,33 @@ cs_saw = box("ChopSaw_Saw",
 chop_objs = [cs_bench, cs_top, cs_saw]
 
 # =============================================================================
-# THICKNESS PLANER — east lower wall, 6" north of chop saw bench
+# TABLE SAW — floating in wider north zone (unchanged)
 # =============================================================================
-# DeWalt 735-class: 22" wide (N-S) × 24" deep (E-W) × 18" machine body.
-# On a stand + wheels: ~48" total height. Sits against east wall when stored;
-# rolls into open centre for use (8'+ infeed/outfeed available there).
+# Cabinet: 22" E-W × 27" N-S, blade at X≈47" (3'11" from west wall).
+# 36" extension table east (fence side). South face at Y=13'.
+# Infeed: 13' south; outfeed: 9' to north wall.
 
-TP_GAP = inch(6)
-TP_Y1  = CS_Y2 + TP_GAP         # south face
-TP_DY  = inch(22)               # N-S footprint
-TP_DX  = inch(24)               # E-W depth (against wall)
-TP_X1  = X_SE - TP_DX
+TS_Y1 = ft(13)
+TS_DY = inch(27)
+TS_X1 = inch(36)
+TS_DX = inch(22)
+TS_DZ = inch(34)
 
-tp_body = box("Planer_Body",
-    TP_X1, TP_Y1, 0,
-    TP_DX, TP_DY, inch(48),
-    color=C_TOOL, transp=0)
-
-# Infeed/outfeed table suggestion (lighter, semi-transparent)
-tp_tables = box("Planer_Tables",
-    TP_X1 - inch(10), TP_Y1, inch(44),
-    TP_DX + inch(20), TP_DY, inch(2),
-    color=C_TOPTBL, transp=30)
-
-planer_objs = [tp_body, tp_tables]
-
-# =============================================================================
-# TABLE SAW — floating in wider north zone
-# =============================================================================
-# Cabinet saw: 22" E-W × 27" N-S, table surface at 34" AFF.
-# Blade at X≈4' from west wall; extension table 36" to the east (right/fence side).
-# South face at Y=13' → infeed clearance 13', outfeed to north wall = 9'.
-# At Y=13' the east wall is at X≈8'2", well clear of the 36" extension.
-# Workflow: feed south→north, offcuts go east past fence into clear zone.
-
-TS_Y1 = ft(13)                  # south face
-TS_DY = inch(27)                # N-S depth of cabinet
-TS_X1 = inch(36)                # 3' from west wall (left side of cabinet)
-TS_DX = inch(22)                # cabinet E-W width  (blade at X≈47")
-TS_DZ = inch(34)                # table surface AFF
-
-# Cabinet body
 ts_cab = box("TableSaw_Cabinet",
     TS_X1, TS_Y1, 0,
     TS_DX, TS_DY, TS_DZ,
     color=C_TOOL, transp=0)
 
-# Cast-iron table surface (1.5" thick)
 ts_top = box("TableSaw_Top",
     TS_X1, TS_Y1, TS_DZ,
     TS_DX, TS_DY, inch(1.5),
     color=C_TOPTBL, transp=0)
 
-# Right extension table — 36" east of cabinet (fence side)
 ts_ext = box("TableSaw_Extension",
     TS_X1 + TS_DX, TS_Y1, TS_DZ,
     inch(36), TS_DY, inch(1.5),
     color=C_TOPTBL, transp=15)
 
-# Outfeed roller stand hint — 4' north of blade, centred on cabinet
 ts_roller = box("TableSaw_RollerStand",
     TS_X1 + inch(4), TS_Y1 + TS_DY + ft(4), TS_DZ - inch(2),
     inch(14), inch(14), inch(2),
@@ -438,45 +493,18 @@ ts_roller = box("TableSaw_RollerStand",
 tablesaw_objs = [ts_cab, ts_top, ts_ext, ts_roller]
 
 # =============================================================================
-# NORTH WALL STORAGE
+# NORTH WALL — lumber rack only (storage cabinets moved to west wall)
 # =============================================================================
-# Lower cabinets: 15" deep × 7' tall, full width of north wall.
-# Gap reserved at door (east 3'6") so cabinets stop at door frame.
-# Lumber rack above: wall-mounted brackets at 6'6" AFF, 8" deep.
-# Stores 8' boards horizontally (shown as a representative mass).
-
-C_STORAGE = C_FRAME             # same pale wood tone as framing
-C_LUMBER  = C_JOIST             # warm wood for stored lumber
-
-NC_DY = inch(15)                # cabinet depth (N-S, from north wall)
-NC_DZ = inch(84)                # 7' tall
-
-# West cabinet run: X=0 to X=7' (stops before door zone)
-nc_west = box("Storage_CabWest",
-    X_W, Y_N - NC_DY, 0,
-    ft(7), NC_DY, NC_DZ,
-    color=C_STORAGE, transp=20)
-
-# East cabinet run: door is at DOOR_X1 to DOOR_X2, so stop at DOOR_X1
-# (east stub between door and east corner is only 6" — skip it)
-nc_east_w = X_W                 # same as DOOR_X1 adjusted below
-nc_east = box("Storage_CabEast",
-    ft(7), Y_N - NC_DY, 0,
-    DOOR_X1 - ft(7), NC_DY, NC_DZ,
-    color=C_STORAGE, transp=20)
-
-# Lumber rack — wall-mounted at 6'6" AFF, 8" deep, full usable width
-# (stops 3' from east corner to keep door clearance)
-LR_Z1  = inch(78)              # bottom of lumber stack (6'6" AFF)
-LR_DZ  = inch(10)              # rack height (a course of boards)
-LR_DY  = inch(8)               # bracket depth from wall
+LR_Z1  = inch(78)
+LR_DZ  = inch(10)
+LR_DY  = inch(8)
 
 lr_rack = box("LumberRack",
     X_W, Y_N - LR_DY, LR_Z1,
     X_NE - ft(3), LR_DY, LR_DZ,
     color=C_LUMBER, transp=25)
 
-storage_objs = [nc_west, nc_east, lr_rack]
+storage_objs = storage_west_objs + [lr_rack]
 
 # =============================================================================
 # GROUPS
@@ -494,7 +522,7 @@ grp("Grp_Door",       [door_obj])
 grp("Grp_Joists",     lower_joist_objs + main_joist_objs)
 grp("Grp_Electrical", [panel_obj])
 grp("Grp_Tools_West", west_wall_objs)
-grp("Grp_Tools_East", chop_objs + planer_objs + tablesaw_objs)
+grp("Grp_Tools_East", chop_objs + tablesaw_objs)
 grp("Grp_Storage",    storage_objs)
 
 # =============================================================================
@@ -511,25 +539,31 @@ print(f"  Room extents  : {X_NE/25.4/12:.2f}' E  x  {Y_N/25.4/12:.2f}' N")
 print(f"  Joist underside: {H_LOWER_BOT/25.4:.0f}\" AFF")
 print("─" * 60)
 print("  WEST WALL (south → north)")
-print(f"    Drill press   : Y={DP_Y1/25.4/12:.2f}' – {(DP_Y1+DP_DY)/25.4/12:.2f}'  (18\"×18\" base)")
-print(f"    Band saw      : Y={BS_Y/25.4/12:.2f}' – {(BS_Y+BS_DY)/25.4/12:.2f}'  (24\"×18\" on wheels)")
+print(f"    Dust collector: Y={Y_S/25.4/12:.2f}' – {DC_DY/25.4/12:.2f}'  (SW corner, 16\"×26\" base)")
+dc_bag2_top = (BAG_Z0 + BAG_H + SPACER_H + BAG_H) / 25.4
+print(f"      Bags (×2, 15\"dia×24\"): stacked to {dc_bag2_top:.1f}\" AFF")
+print(f"    Drill press   : Y={DP_Y1/25.4/12:.2f}' – {(DP_Y1+DP_DY)/25.4/12:.2f}'")
+print(f"    Band saw      : Y={BS_Y/25.4/12:.2f}' – {(BS_Y+BS_DY)/25.4/12:.2f}'  (24\"×18\", on wheels)")
+print(f"    Planer        : Y={PL_Y1/25.4/12:.2f}' – {(PL_Y1+PL_STAND_DY)/25.4/12:.2f}'  "
+      f"(20\"×20\"×16\" machine on 24\"×24\"×36\" stand)")
+print(f"    Storage cabs  : Y={ST_Y1/25.4/12:.2f}' – {ST_Y2/25.4/12:.2f}'  "
+      f"({ST_DY/25.4/12:.1f}' long, 24\" deep, 7' tall)")
 print(f"    Elec. panel   : Y={panel_bot_y/25.4/12:.2f}' – {panel_top_y/25.4/12:.2f}'")
 print("─" * 60)
 print("  EAST WALL (south → north)")
-print(f"    Chop saw stn  : Y={CS_Y1/25.4/12:.2f}' – {CS_Y2/25.4/12:.2f}'  (6' bench, 24\" deep)")
-print(f"    Thickness plnr: Y={TP_Y1/25.4/12:.2f}' – {(TP_Y1+TP_DY)/25.4/12:.2f}'  (on wheels)")
-print(f"    Assembly zone : Y=~{(TP_Y1+TP_DY)/25.4/12:.1f}' – {TS_Y1/25.4/12:.1f}'  (open floor)")
+print(f"    Open staging  : Y=0 – {CS_Y1/25.4/12:.2f}'  (clear floor below chop saw)")
+print(f"    Chop saw stn  : Y={CS_Y1/25.4/12:.2f}' – {CS_Y2/25.4/12:.2f}'  "
+      f"(bench starts at jut, saw at Y≈{CS_SAW_Y/25.4/12:.1f}')")
 print("─" * 60)
-print("  TABLE SAW (floating)")
+print("  TABLE SAW (floating, wider north zone)")
 print(f"    Cabinet       : X={TS_X1/25.4/12:.2f}' – {(TS_X1+TS_DX)/25.4/12:.2f}', "
       f"Y={TS_Y1/25.4/12:.2f}' – {(TS_Y1+TS_DY)/25.4/12:.2f}'")
-print(f"    Extension tbl : +36\" east (fence side)")
-print(f"    Infeed clear  : {TS_Y1/25.4/12:.1f}' south  |  "
-      f"Outfeed clear: {(Y_N-TS_Y1-TS_DY)/25.4/12:.1f}' north")
+print(f"    Extension     : +36\" east (fence side)")
+print(f"    Infeed        : {TS_Y1/25.4/12:.1f}' south  |  "
+      f"Outfeed: {(Y_N-TS_Y1-TS_DY)/25.4/12:.1f}' north")
 print("─" * 60)
 print("  NORTH WALL")
-print(f"    Cabinets      : 15\" deep, 7' tall, full width (gap at door)")
-print(f"    Lumber rack   : 8\" deep at 6'6\" AFF (8' boards horizontal)")
+print(f"    Lumber rack   : 8\" deep at 6'6\" AFF  (cabinets moved to west wall)")
 print("=" * 60)
 print("Groups: Grp_Walls / Grp_Joists / Grp_Electrical /")
 print("        Grp_Tools_West / Grp_Tools_East / Grp_Storage")
